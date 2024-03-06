@@ -1,101 +1,119 @@
-const exp = require('constants');
-const express=require('express');
-const path=require('path');
-const port=8000;
+import express from 'express';
+import path from 'path';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import { fileURLToPath } from 'url'; // Import fileURLToPath function
+import Contact from './Models/contact.js'
+ 
 
-const db=require('./config/mongoose')
-const app=express();
+import mongoose from 'mongoose';
+dotenv.config();
+mongoose.connect(process.env.MONGO).then(()=>{
+    console.log("Connected to the DB");
+}).catch((err)=>{
+    console.log("Error",err);
+})
 
-//telling the express we are using EJS as template engine
-app.set('view engine','ejs');
-//setting the path for my views
-app.set('views',path.join(__dirname,'views'));
+const __filename = fileURLToPath(import.meta.url); // Get filename from import.meta.url
+const __dirname = path.dirname(__filename); // Get directory name from filename
 
-//middleaware for parsing
-app.use(express.urlencoded())
+const app = express();
+app.use(cors());
+const port = 8000;
 
-//middleware to access static files
+// telling the express we are using EJS as template engine
+app.set('view engine', 'ejs');
+// setting the path for my views
+app.set('views', path.join(__dirname, 'views'));
+
+// middleaware for parsing
+app.use(express.urlencoded({ extended: true }));
+
+// middleware to access static files
 app.use(express.static('assets'));
 
-//custom middle ware 
-//middle ware will have access to req and res
-//next will take us to next middleware or if not present then it would take us to controller
-// app.use(function(req,res,next){
-//     console.log("Middleware1 called");
-//     next();
-// })
+// routes
 
-// //middleware2 
-// app.use(function(req,res,next){
-//     console.log("Middleware2 called");
-//     next();
-// })
+app.get('/home', (req, res) => {
+    return res.render('home', { title: 'My contact List' });
+});
 
+// var contactList = [
+//     {
+//         name: "Tsering Wangchu",
+//         number: "57827789"
+//     },
+//     {
+//         name: "Tsering Wangchu",
+//         number: "456789"
+//     },
+//     {
+//         name: "Tsering Wangchu",
+//         number: "9000789"
+//     },
+//     {
+//         name: "Tsering Wangchu",
+//         number: "58529999"
+//     }
+// ];
 
-app.get('/home',function(req,res){
-   // console.log(__dirname);
-   // res.send('Cool Its working !!')
-   return res.render('home',{title:'My contact List'});
-})
-var contactList=[
-    {
-        name:"Tsering Wangchu",
-        number:"57827789"
-    },
-    {
-        name:"Tsering Wangchu",
-        number:"456789"
-    },
-    {
-        name:"Tsering Wangchu",
-        number:"9000789"
-    }, 
-     {
-        name:"Tsering Wangchu",
-        number:"58529999"
-    }
+app.get('/', async (req, res) => {
 
-];
-
-app.get('/',function(req,res){
-    return res.render('practice',{
-        title:"This is playGame",
-        contact_list:contactList
-    })
-})
-
-app.post('/add-contact',function(req,res){
-   //  return res.redirect('/practice');
-//    console.log(req.body);
-//    console.log(req.body.name)
-//    console.log(req.body.number)
-    //  contactList.push(
-    //     {
-    //         name:req.body.name,
-    //         phone_Number:req.body.number
+    //  Contact.find({},function(error,contactList){
+    //     if(error){
+    //         console.log("Error in fetching data");
+    //         return;
     //     }
-    //  )
-    contactList.push(req.body);
-     return res.redirect('/');
-})
+    //     return res.render('practice', {
+    //         title: "This is playGame",
+    //         contact_list: contactList
+    //     });
 
-app.get('/delete-contact/:number',function(req,res){
-    console.log(req.params);
-    let number=req.params.number;
+    //  })
+    try {
+        const contactList= await Contact.find({}).exec();
+        return res.render('practice',{
+            title:"This is playgame",
+            contact_list:contactList
+        });
+    } catch (error) {
+        console.log("Error in fetching data:", error);
+        return res.status(500).send("Error fetching data");
+    }
+    
+});
 
-    let findIndex=contactList.findIndex(contact=> contact.number== number);
-    if(findIndex !=-1){
-        contactList.splice(findIndex,1);
+app.post('/add-contact', async (req, res) => {
+    // contactList.push(req.body);
+    try {
+        const newContact=await Contact.create(
+            {
+                name:req.body.name,
+                number:req.body.number
+            }
+        );
+        console.log("New contact created:", newContact);
+        return res.redirect('/');
+        
+    } catch (error) {
+        console.log("Contact cannot be created:", err);
+        return res.redirect('/');
+    }
+    
+});
+
+app.get('/delete-contact/:number', (req, res) => {
+    let number = req.params.number;
+    let findIndex = contactList.findIndex(contact => contact.number == number);
+    if (findIndex != -1) {
+        contactList.splice(findIndex, 1);
     }
     return res.redirect('/');
-})
+});
 
-
-app.listen(port,function(err){
-    if(err){
-        console.log('Error occured');
-       
-
+app.listen(port, (err) => {
+    if (err) {
+        console.log('Error occurred');
     }
-    console.log('Server is running at port: ',port);
+    console.log('Server is running at port: ', port);
 });

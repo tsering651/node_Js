@@ -102,13 +102,18 @@ app.post('/add-contact', async (req, res) => {
     
 });
 
-app.get('/delete-contact/:number', (req, res) => {
-    let number = req.params.number;
-    let findIndex = contactList.findIndex(contact => contact.number == number);
-    if (findIndex != -1) {
-        contactList.splice(findIndex, 1);
-    }
-    return res.redirect('/');
+app.get('/delete-contact/:_id', async (req, res) => {
+    //getting the id from the url params
+    let id = req.params._id;
+    console.log(id);
+    //finding the user with the above id in the database
+     try {
+        await Contact.findByIdAndDelete(id);
+        return res.redirect('/');
+     } catch (error) {
+        console.log("Error while delteing",error);
+        return res.status(500).send("Unable to delete");
+     }
 });
 
 app.listen(port, (err) => {
